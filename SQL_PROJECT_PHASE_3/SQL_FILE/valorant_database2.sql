@@ -1,0 +1,81 @@
+CREATE DATABASE IF NOT EXISTS valorant_tracker2;
+USE valorant_tracker2;
+
+-- TEAM
+CREATE TABLE IF NOT EXISTS TEAM (
+  team_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  school VARCHAR(100),
+  region VARCHAR(50)
+);
+
+-- PLAYER
+CREATE TABLE IF NOT EXISTS PLAYER (
+  player_id INT AUTO_INCREMENT PRIMARY KEY,
+  team_id INT,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  role_ VARCHAR(20) NOT NULL,
+  rank_ VARCHAR(30),
+  CONSTRAINT chk_player_role CHECK (role_ IN ('Duelist','Controller','Initiator','Sentinel','Flex')),
+  FOREIGN KEY (team_id) REFERENCES TEAM(team_id) 
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- Multivalued attribute: AGENT_PLAYED
+CREATE TABLE IF NOT EXISTS AGENT_PLAYED (
+  player_id INT NOT NULL,
+  agent_name VARCHAR(50) NOT NULL,
+  PRIMARY KEY (player_id, agent_name),
+  FOREIGN KEY (player_id) REFERENCES PLAYER(player_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- MATCH
+CREATE TABLE IF NOT EXISTS MATCH_T (
+  match_id INT AUTO_INCREMENT PRIMARY KEY,
+  team_id INT NOT NULL,
+  date_played DATE NOT NULL,
+  map_name VARCHAR(50) NOT NULL,
+  opponent VARCHAR(100),
+  result VARCHAR(10) NOT NULL,
+  duration_min SMALLINT,
+  CONSTRAINT chk_match_result CHECK (result IN ('Win','Loss','Draw')),
+  FOREIGN KEY (team_id) REFERENCES TEAM(team_id) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- PERFORMANCE (weak entity mapped as relation)
+CREATE TABLE IF NOT EXISTS PERFORMANCE (
+  player_id INT NOT NULL,
+  match_id INT NOT NULL,
+  kills SMALLINT NOT NULL DEFAULT 0,
+  deaths SMALLINT NOT NULL DEFAULT 0,
+  assists SMALLINT NOT NULL DEFAULT 0,
+  headshot_pct FLOAT,
+  agent_played VARCHAR(50) NOT NULL,
+  acs SMALLINT,
+  PRIMARY KEY (player_id, match_id),
+  FOREIGN KEY (player_id) REFERENCES PLAYER(player_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (match_id) REFERENCES MATCH_T(match_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT chk_headshot_pct CHECK (headshot_pct >= 0 AND headshot_pct <= 100)
+);
+
+-- VOD
+CREATE TABLE IF NOT EXISTS VOD (
+  vod_id INT AUTO_INCREMENT PRIMARY KEY,
+  match_id INT NOT NULL,
+  file_url VARCHAR(255) NOT NULL,
+  upload_date DATETIME NOT NULL,
+  FOREIGN KEY (match_id) REFERENCES MATCH_T(match_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- NOTE
+CREATE TABLE IF NOT EXISTS NOTE (
+  note_id INT AUTO_INCREMENT PRIMARY KEY,
+  vod_id INT NOT NULL,
+  vod_timestamp TIME,
+  author VARCHAR(100),
+  content TEXT NOT NULL,
+  FOREIGN KEY (vod_id) REFERENCES VOD(vod_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
